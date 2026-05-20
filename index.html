@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library Catalog</title>
+
+<!-- Fonts: editorial serif + refined mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+<style>
+:root {
+  --bg:        #181613;
+  --bg-2:      #211e1a;
+  --bg-3:      #2a2620;
+  --ink:       #f3ead8;
+  --ink-dim:   #c7bca2;
+  --ink-mute:  #8a8170;
+  --rule:      #3a342c;
+  --accent:    #d6552b;       /* burnt orange */
+  --accent-2:  #e9b94b;       /* mustard */
+  --accent-3:  #6b8a4f;       /* sage */
+  --accent-4:  #4d7a99;       /* dusk blue */
+  --accent-5:  #a85a8e;       /* berry */
+  --accent-6:  #b67341;       /* clay */
+  --good:      #6b8a4f;
+  --warn:      #d6552b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Fraunces", Georgia, serif;
+  font-feature-settings: "ss01", "ss02";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- Background atmosphere ---------- */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(1100px 600px at 80% -10%, rgba(214,85,43,0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 30%, rgba(77,122,153,0.10), transparent 60%),
+    radial-gradient(700px 400px at 50% 120%, rgba(233,185,75,0.08), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  /* Subtle film grain */
+  content: "";
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.5;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 40px 36px 96px;
+}
+
+/* ---------- Header ---------- */
+header.masthead {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 32px;
+}
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.brand h1 {
+  font-family: "Fraunces", serif;
+  font-weight: 300;
+  font-size: clamp(38px, 5vw, 64px);
+  font-style: italic;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 0.95;
+}
+.brand h1 em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--accent-2);
+}
+.kicker {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.masthead .meta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  text-align: right;
+}
+.masthead .meta b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ---------- File picker (initial state) ---------- */
+.dropzone {
+  border: 1px dashed var(--rule);
+  background: linear-gradient(180deg, var(--bg-2), transparent);
+  padding: 80px 40px;
+  text-align: center;
+  border-radius: 4px;
+  transition: all .2s ease;
+  cursor: pointer;
+}
+.dropzone.drag {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(214,85,43,0.10), transparent);
+}
+.dropzone h2 {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 32px;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+.dropzone p {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0;
+}
+.dropzone input[type="file"] { display: none; }
+.dropzone .btn {
+  display: inline-block;
+  margin-top: 24px;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: #fff;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-radius: 2px;
+}
+
+/* ---------- KPI strip ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border: 1px solid var(--rule);
+  background: var(--bg-2);
+  margin-bottom: 36px;
+}
+.stat {
+  padding: 22px 24px;
+  border-right: 1px solid var(--rule);
+}
+.stat:last-child { border-right: none; }
+.stat .label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-bottom: 8px;
+}
+.stat .value {
+  font-family: "Fraunces", serif;
+  font-weight: 400;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+}
+.stat .value small {
+  font-size: 14px;
+  color: var(--ink-mute);
+  margin-left: 6px;
+  letter-spacing: 0;
+  font-weight: 300;
+}
+
+/* ---------- Section headings ---------- */
+.section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.section-title h2 {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 28px;
+  margin: 0;
+  color: var(--ink);
+}
+.section-title .hint {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* ---------- Charts grid ---------- */
+.charts {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 28px;
+  margin-bottom: 48px;
+}
+@media (max-width: 980px) {
+  .charts { grid-template-columns: 1fr; }
+  .stats  { grid-template-columns: repeat(2, 1fr); }
+  .stat:nth-child(2) { border-right: none; }
+}
+.panel {
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  padding: 22px;
+}
+.panel h3 {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 16px;
+  font-weight: 500;
+}
+
+/* Treemap */
+#treemap {
+  width: 100%;
+  height: 460px;
+  display: block;
+}
+.tm-cell {
+  cursor: pointer;
+  transition: opacity .15s ease;
+}
+.tm-cell:hover { opacity: 0.85; }
+.tm-cell.active rect { stroke: var(--ink); stroke-width: 2px; }
+.tm-label {
+  font-family: "Fraunces", serif;
+  fill: #fff;
+  pointer-events: none;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.tm-count {
+  font-family: "JetBrains Mono", monospace;
+  fill: rgba(255,255,255,0.85);
+  pointer-events: none;
+  letter-spacing: 0.05em;
+}
+
+/* Extension donut */
+#ext-chart { width: 100%; height: 240px; }
+.ext-legend {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ext-legend .row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.ext-legend .swatch {
+  width: 12px; height: 12px;
+  border-radius: 2px;
+}
+.ext-legend .count { color: var(--ink-mute); }
+
+/* ---------- Filters ---------- */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 220px 180px auto;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+@media (max-width: 880px) {
+  .filters { grid-template-columns: 1fr 1fr; }
+}
+.field {
+  position: relative;
+}
+.field label {
+  position: absolute;
+  top: -7px; left: 10px;
+  background: var(--bg);
+  padding: 0 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.field input, .field select {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  padding: 14px 14px;
+  border-radius: 2px;
+  outline: none;
+  transition: border-color .15s ease;
+}
+.field input:focus, .field select:focus { border-color: var(--accent-2); }
+.field input::placeholder { color: var(--ink-mute); }
+.btn-clear {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-dim);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0 18px;
+  cursor: pointer;
+  transition: all .15s ease;
+  border-radius: 2px;
+}
+.btn-clear:hover { border-color: var(--accent); color: var(--accent); }
+
+.result-count {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin: 0 0 12px;
+}
+.result-count b { color: var(--accent-2); font-weight: 500; }
+
+/* ---------- Table ---------- */
+.table-wrap {
+  background: var(--bg-2);
+  border: 1px solid var(--rule);
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+}
+th {
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--bg-3);
+  color: var(--ink-mute);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+th:hover { color: var(--ink); }
+th .sort-ind {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--accent-2);
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+th.sorted .sort-ind { opacity: 1; }
+
+td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-dim);
+  vertical-align: top;
+}
+tbody tr:hover td { background: rgba(255,255,255,0.025); color: var(--ink); }
+
+td.name {
+  color: var(--ink);
+  max-width: 420px;
+  word-break: break-word;
+  font-family: "Fraunces", serif;
+  font-size: 14.5px;
+  font-weight: 400;
+}
+td.path {
+  color: var(--ink-mute);
+  font-size: 11px;
+  max-width: 460px;
+  word-break: break-all;
+}
+td.ext {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink-mute);
+}
+td.cat .pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Pagination */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.pager .pages { display: flex; gap: 6px; }
+.pager button {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink-dim);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all .15s ease;
+}
+.pager button:hover:not(:disabled) { border-color: var(--accent-2); color: var(--accent-2); }
+.pager button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pager button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  padding: 10px 14px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--ink);
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 100;
+  border-radius: 2px;
+  max-width: 280px;
+}
+.tooltip .t-name {
+  font-family: "Fraunces", serif;
+  font-size: 14px;
+  font-style: italic;
+  display: block;
+  margin-bottom: 4px;
+  color: var(--accent-2);
+  letter-spacing: 0;
+}
+.tooltip .t-count {
+  color: var(--ink-mute);
+}
+
+.hidden { display: none !important; }
+
+/* Loading */
+.loader {
+  text-align: center;
+  padding: 60px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.loader .dots::after {
+  content: "";
+  animation: dots 1.4s steps(4, end) infinite;
+}
+@keyframes dots {
+  0%, 20%   { content: ""; }
+  40%       { content: "."; }
+  60%       { content: ".."; }
+  80%, 100% { content: "..."; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <div class="kicker">A Catalog of Things on Disk · Est. 2026</div>
+      <div class="brand">
+        <h1>The <em>Library</em> Catalog</h1>
+      </div>
+    </div>
+    <div class="meta" id="meta-info">No file loaded</div>
+  </header>
+
+  <!-- DROPZONE (initial) -->
+  <div id="dropzone" class="dropzone">
+    <h2>Drop your catalog here</h2>
+    <p>or click to choose a CSV file</p>
+    <label class="btn" for="csv-input">Select CSV</label>
+    <input id="csv-input" type="file" accept=".csv,text/csv">
+  </div>
+
+  <!-- LOADER -->
+  <div id="loader" class="loader hidden">Parsing catalog<span class="dots"></span></div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="hidden">
+
+    <!-- KPI strip -->
+    <section class="stats" id="stats"></section>
+
+    <!-- Charts -->
+    <div class="section-title">
+      <h2>Composition of the collection</h2>
+      <div class="hint">Click a tile to filter the table below</div>
+    </div>
+    <div class="charts">
+      <div class="panel">
+        <h3>Categories · By volume</h3>
+        <svg id="treemap"></svg>
+      </div>
+      <div class="panel">
+        <h3>File types</h3>
+        <svg id="ext-chart"></svg>
+        <div id="ext-legend" class="ext-legend"></div>
+      </div>
+    </div>
+
+    <!-- Browse -->
+    <div class="section-title">
+      <h2>Browse the shelves</h2>
+      <div class="hint" id="active-filter-hint"></div>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label>Search title or path</label>
+        <input id="search-input" type="text" placeholder="e.g. Tolkien, /storage/books/X, .epub">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="cat-filter"></select>
+      </div>
+      <div class="field">
+        <label>File type</label>
+        <select id="ext-filter"></select>
+      </div>
+      <button class="btn-clear" id="clear-filters">Clear</button>
+    </div>
+
+    <div class="result-count" id="result-count"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="filename">Title <span class="sort-ind">▾</span></th>
+            <th data-sort="file_type">Type <span class="sort-ind">▾</span></th>
+            <th data-sort="category">Category <span class="sort-ind">▾</span></th>
+            <th data-sort="file_path">Path <span class="sort-ind">▾</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="pager" id="pager"></div>
+  </div>
+</div>
+
+<div id="tooltip" class="tooltip"></div>
+
+<script>
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const state = {
+  rows: [],
+  filtered: [],
+  page: 1,
+  pageSize: 50,
+  sortKey: null,
+  sortDir: 1,
+  catFilter: "",
+  extFilter: "",
+  search: "",
+  catColors: new Map(),
+};
+
+const PALETTE = [
+  "#d6552b", "#e9b94b", "#6b8a4f", "#4d7a99", "#a85a8e",
+  "#b67341", "#8c7bb0", "#c99553", "#5a9b8e", "#bc4f4f",
+  "#7d8e3e", "#3d6b88", "#9b5d7c", "#a87b4a", "#5e8b6c",
+  "#cc7755", "#7a6e9c", "#b39646", "#4a7570", "#a45c4c",
+];
+
+/* =========================================================================
+   CSV LOADING
+   ========================================================================= */
+const dropzone   = document.getElementById("dropzone");
+const fileInput  = document.getElementById("csv-input");
+const loader     = document.getElementById("loader");
+const dashboard  = document.getElementById("dashboard");
+
+dropzone.addEventListener("click", () => fileInput.click());
+dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag"); });
+dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
+dropzone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropzone.classList.remove("drag");
+  const file = e.dataTransfer.files?.[0];
+  if (file) handleFile(file);
+});
+fileInput.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  dropzone.classList.add("hidden");
+  loader.classList.remove("hidden");
+
+  document.getElementById("meta-info").innerHTML =
+    `<b>${escapeHtml(file.name)}</b> · ${formatBytes(file.size)}`;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    worker: true,
+    complete: (results) => {
+      loader.classList.add("hidden");
+      state.rows = results.data.filter(r => r.filename); // drop empty rows
+      // Normalize keys / lower-case extension just in case
+      state.rows.forEach(r => {
+        r.file_type = (r.file_type || "").toLowerCase();
+      });
+      assignCategoryColors();
+      buildDashboard();
+      dashboard.classList.remove("hidden");
+    },
+    error: (err) => {
+      loader.classList.add("hidden");
+      dropzone.classList.remove("hidden");
+      alert("Could not parse CSV: " + err.message);
+    },
+  });
+}
+
+/* =========================================================================
+   BUILD
+   ========================================================================= */
+function assignCategoryColors() {
+  // Color each category once; biggest categories get the strongest accents.
+  const counts = d3.rollup(state.rows, v => v.length, r => r.category || "Uncategorized");
+  const ordered = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  ordered.forEach(([cat], i) => {
+    state.catColors.set(cat, PALETTE[i % PALETTE.length]);
+  });
+}
+
+function buildDashboard() {
+  buildStats();
+  buildTreemap();
+  buildExtChart();
+  buildFilters();
+  applyFilters();
+}
+
+/* ---------- KPIs ---------- */
+function buildStats() {
+  const rows = state.rows;
+  const total = rows.length;
+  const categories = new Set(rows.map(r => r.category || "Uncategorized"));
+  const exts = new Set(rows.map(r => r.file_type).filter(Boolean));
+  const uncat = rows.filter(r => (r.category || "") === "Uncategorized").length;
+  const uncatPct = total ? (100 * uncat / total) : 0;
+
+  document.getElementById("stats").innerHTML = `
+    <div class="stat">
+      <div class="label">Items cataloged</div>
+      <div class="value">${formatNum(total)}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Distinct categories</div>
+      <div class="value">${categories.size}</div>
+    </div>
+    <div class="stat">
+      <div class="label">File types</div>
+      <div class="value">${exts.size}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Uncategorized</div>
+      <div class="value">${formatNum(uncat)}<small>${uncatPct.toFixed(1)}%</small></div>
+    </div>
+  `;
+}
+
+/* ---------- Treemap ---------- */
+function buildTreemap() {
+  const svg = d3.select("#treemap");
+  svg.selectAll("*").remove();
+
+  const node = svg.node();
+  const width = node.clientWidth || 800;
+  const height = 460;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+  const counts = d3.rollup(state.rows, v => v.length, r => r.category || "Uncategorized");
+  const data = {
+    name: "root",
+    children: [...counts.entries()].map(([name, value]) => ({ name, value })),
+  };
+
+  const root = d3.hierarchy(data)
+    .sum(d => d.value)
+    .sort((a, b) => b.value - a.value);
+
+  d3.treemap()
+    .size([width, height])
+    .paddingInner(2)
+    .round(true)(root);
+
+  const tip = d3.select("#tooltip");
+
+  const cells = svg.selectAll("g.tm-cell")
+    .data(root.leaves())
+    .join("g")
+    .attr("class", "tm-cell")
+    .attr("transform", d => `translate(${d.x0},${d.y0})`)
+    .on("mousemove", (e, d) => {
+      tip.style("opacity", 1)
+        .style("left", (e.clientX + 14) + "px")
+        .style("top",  (e.clientY + 14) + "px")
+        .html(`<span class="t-name">${escapeHtml(d.data.name)}</span>
+               <span class="t-count">${formatNum(d.value)} files · ${(100 * d.value / state.rows.length).toFixed(1)}%</span>`);
+    })
+    .on("mouseleave", () => tip.style("opacity", 0))
+    .on("click", (e, d) => {
+      // Toggle filter
+      if (state.catFilter === d.data.name) {
+        state.catFilter = "";
+      } else {
+        state.catFilter = d.data.name;
+      }
+      document.getElementById("cat-filter").value = state.catFilter;
+      state.page = 1;
+      applyFilters();
+      svg.selectAll(".tm-cell")
+        .classed("active", g => g.data.name === state.catFilter);
+    });
+
+  cells.append("rect")
+    .attr("width",  d => Math.max(0, d.x1 - d.x0))
+    .attr("height", d => Math.max(0, d.y1 - d.y0))
+    .attr("fill",   d => state.catColors.get(d.data.name) || "#888")
+    .attr("stroke", "var(--bg)")
+    .attr("stroke-width", 1);
+
+  cells.each(function(d) {
+    const w = d.x1 - d.x0;
+    const h = d.y1 - d.y0;
+    if (w < 60 || h < 30) return;          // skip tiny cells
+
+    const g = d3.select(this);
+    const labelSize = Math.max(11, Math.min(20, Math.sqrt(w * h) / 11));
+    const countSize = Math.max(9, Math.min(13, labelSize * 0.65));
+
+    // Word-wrap the label
+    const words = d.data.name.split(/[\s\/]+/);
+    const lines = [];
+    let line = "";
+    const maxChars = Math.max(6, Math.floor(w / (labelSize * 0.55)));
+    for (const w_ of words) {
+      if ((line + " " + w_).trim().length > maxChars && line) {
+        lines.push(line); line = w_;
+      } else {
+        line = (line ? line + " " : "") + w_;
+      }
+    }
+    if (line) lines.push(line);
+    const maxLines = Math.min(lines.length, Math.floor((h - 12) / (labelSize * 1.15)));
+
+    for (let i = 0; i < maxLines; i++) {
+      g.append("text")
+        .attr("class", "tm-label")
+        .attr("x", 10)
+        .attr("y", 14 + (i + 1) * labelSize * 1.05)
+        .attr("font-size", labelSize)
+        .text(lines[i]);
+    }
+    if (h > labelSize * (maxLines + 1) + 12) {
+      g.append("text")
+        .attr("class", "tm-count")
+        .attr("x", 10)
+        .attr("y", h - 10)
+        .attr("font-size", countSize)
+        .text(`${formatNum(d.value)} · ${(100 * d.value / state.rows.length).toFixed(1)}%`);
+    }
+  });
+}
+
+/* ---------- Extension donut ---------- */
+function buildExtChart() {
+  const svg = d3.select("#ext-chart");
+  svg.selectAll("*").remove();
+  const node = svg.node();
+  const width = node.clientWidth || 360;
+  const height = 240;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+  const counts = d3.rollup(state.rows, v => v.length, r => r.file_type || "?");
+  const data = [...counts.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  // Group long tail
+  const top = data.slice(0, 7);
+  const otherSum = data.slice(7).reduce((s, d) => s + d.value, 0);
+  if (otherSum) top.push({ name: "other", value: otherSum });
+
+  const radius = Math.min(width, height) / 2 - 10;
+  const cx = width / 2;
+  const cy = height / 2;
+
+  const arc = d3.arc().innerRadius(radius * 0.55).outerRadius(radius);
+  const pie = d3.pie().value(d => d.value).sort(null);
+
+  const colors = ["#d6552b","#e9b94b","#6b8a4f","#4d7a99","#a85a8e","#b67341","#8c7bb0","#5a9b8e"];
+
+  const g = svg.append("g").attr("transform", `translate(${cx},${cy})`);
+  g.selectAll("path")
+    .data(pie(top))
+    .join("path")
+    .attr("d", arc)
+    .attr("fill", (d, i) => colors[i % colors.length])
+    .attr("stroke", "var(--bg-2)")
+    .attr("stroke-width", 2);
+
+  const total = top.reduce((s, d) => s + d.value, 0);
+  g.append("text")
+    .attr("text-anchor", "middle")
+    .attr("y", -4)
+    .attr("font-family", "Fraunces, serif")
+    .attr("font-style", "italic")
+    .attr("font-size", 32)
+    .attr("fill", "var(--ink)")
+    .text(formatNum(total));
+  g.append("text")
+    .attr("text-anchor", "middle")
+    .attr("y", 18)
+    .attr("font-family", "JetBrains Mono, monospace")
+    .attr("font-size", 9)
+    .attr("letter-spacing", "0.2em")
+    .attr("fill", "var(--ink-mute)")
+    .text("TOTAL");
+
+  const legend = document.getElementById("ext-legend");
+  legend.innerHTML = top.map((d, i) => `
+    <div class="row">
+      <span class="swatch" style="background:${colors[i % colors.length]}"></span>
+      <span>.${escapeHtml(d.name)}</span>
+      <span class="count">${formatNum(d.value)}</span>
+    </div>
+  `).join("");
+}
+
+/* ---------- Filters ---------- */
+function buildFilters() {
+  const cats = d3.rollup(state.rows, v => v.length, r => r.category || "Uncategorized");
+  const orderedCats = [...cats.entries()].sort((a, b) => b[1] - a[1]);
+
+  const catSel = document.getElementById("cat-filter");
+  catSel.innerHTML = `<option value="">All categories</option>` +
+    orderedCats.map(([c, n]) => `<option value="${escapeAttr(c)}">${escapeHtml(c)} (${formatNum(n)})</option>`).join("");
+
+  const exts = d3.rollup(state.rows, v => v.length, r => r.file_type || "");
+  const orderedExts = [...exts.entries()].sort((a, b) => b[1] - a[1]);
+  const extSel = document.getElementById("ext-filter");
+  extSel.innerHTML = `<option value="">All file types</option>` +
+    orderedExts.map(([e, n]) => `<option value="${escapeAttr(e)}">.${escapeHtml(e || "?")} (${formatNum(n)})</option>`).join("");
+
+  catSel.addEventListener("change", (e) => {
+    state.catFilter = e.target.value;
+    state.page = 1;
+    applyFilters();
+    d3.select("#treemap").selectAll(".tm-cell")
+      .classed("active", g => g.data.name === state.catFilter);
+  });
+  extSel.addEventListener("change", (e) => {
+    state.extFilter = e.target.value;
+    state.page = 1;
+    applyFilters();
+  });
+
+  let searchTimer;
+  document.getElementById("search-input").addEventListener("input", (e) => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      state.search = e.target.value.toLowerCase();
+      state.page = 1;
+      applyFilters();
+    }, 150);
+  });
+
+  document.getElementById("clear-filters").addEventListener("click", () => {
+    state.catFilter = "";
+    state.extFilter = "";
+    state.search = "";
+    document.getElementById("cat-filter").value = "";
+    document.getElementById("ext-filter").value = "";
+    document.getElementById("search-input").value = "";
+    state.page = 1;
+    applyFilters();
+    d3.select("#treemap").selectAll(".tm-cell").classed("active", false);
+  });
+
+  // Header sort
+  document.querySelectorAll("th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.sort;
+      if (state.sortKey === key) {
+        state.sortDir *= -1;
+      } else {
+        state.sortKey = key; state.sortDir = 1;
+      }
+      document.querySelectorAll("th").forEach(t => t.classList.remove("sorted"));
+      th.classList.add("sorted");
+      th.querySelector(".sort-ind").textContent = state.sortDir > 0 ? "▾" : "▴";
+      state.page = 1;
+      applyFilters();
+    });
+  });
+}
+
+/* ---------- Filter application ---------- */
+function applyFilters() {
+  const q = state.search;
+  let out = state.rows;
+  if (state.catFilter) out = out.filter(r => (r.category || "Uncategorized") === state.catFilter);
+  if (state.extFilter !== "") out = out.filter(r => (r.file_type || "") === state.extFilter);
+  if (q) {
+    out = out.filter(r =>
+      (r.filename && r.filename.toLowerCase().includes(q)) ||
+      (r.file_path && r.file_path.toLowerCase().includes(q))
+    );
+  }
+  if (state.sortKey) {
+    const k = state.sortKey, dir = state.sortDir;
+    out = [...out].sort((a, b) => {
+      const av = (a[k] || "").toLowerCase();
+      const bv = (b[k] || "").toLowerCase();
+      return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+    });
+  }
+  state.filtered = out;
+  renderResultsBar();
+  renderTable();
+  renderPager();
+  renderActiveFilterHint();
+}
+
+function renderActiveFilterHint() {
+  const bits = [];
+  if (state.catFilter) bits.push(`Category: ${state.catFilter}`);
+  if (state.extFilter) bits.push(`Type: .${state.extFilter}`);
+  if (state.search) bits.push(`Search: "${state.search}"`);
+  document.getElementById("active-filter-hint").textContent =
+    bits.length ? bits.join(" · ") : "Showing everything";
+}
+
+function renderResultsBar() {
+  document.getElementById("result-count").innerHTML =
+    `Showing <b>${formatNum(state.filtered.length)}</b> of ${formatNum(state.rows.length)} items`;
+}
+
+function renderTable() {
+  const tbody = document.getElementById("tbody");
+  const start = (state.page - 1) * state.pageSize;
+  const slice = state.filtered.slice(start, start + state.pageSize);
+
+  if (slice.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; font-style: italic; color: var(--ink-mute);">No items match these filters.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = slice.map(r => {
+    const cat = r.category || "Uncategorized";
+    const color = state.catColors.get(cat) || "#888";
+    return `
+      <tr>
+        <td class="name">${escapeHtml(r.filename || "")}</td>
+        <td class="ext">${escapeHtml(r.file_type || "")}</td>
+        <td class="cat"><span class="pill" style="background:${color}26; color:${color}; border:1px solid ${color}55">${escapeHtml(cat)}</span></td>
+        <td class="path">${escapeHtml(r.file_path || "")}</td>
+      </tr>`;
+  }).join("");
+}
+
+function renderPager() {
+  const total = state.filtered.length;
+  const pages = Math.max(1, Math.ceil(total / state.pageSize));
+  const cur = state.page;
+  const pager = document.getElementById("pager");
+
+  // Build a compact page list: 1 … cur-1 cur cur+1 … last
+  const set = new Set([1, pages, cur - 1, cur, cur + 1, cur - 2, cur + 2]);
+  const pagesList = [...set].filter(p => p >= 1 && p <= pages).sort((a, b) => a - b);
+  const buttons = [];
+  let prev = 0;
+  for (const p of pagesList) {
+    if (p - prev > 1) buttons.push(`<span style="padding: 0 6px;">…</span>`);
+    buttons.push(`<button data-page="${p}" class="${p === cur ? 'active' : ''}">${p}</button>`);
+    prev = p;
+  }
+
+  pager.innerHTML = `
+    <div>Page ${cur} / ${pages}</div>
+    <div class="pages">
+      <button data-page="${Math.max(1, cur - 1)}" ${cur === 1 ? 'disabled' : ''}>Prev</button>
+      ${buttons.join("")}
+      <button data-page="${Math.min(pages, cur + 1)}" ${cur === pages ? 'disabled' : ''}>Next</button>
+    </div>
+    <div>${state.pageSize} per page</div>
+  `;
+
+  pager.querySelectorAll("button[data-page]").forEach(b => {
+    b.addEventListener("click", () => {
+      const p = parseInt(b.dataset.page, 10);
+      if (!isNaN(p)) { state.page = p; renderTable(); renderPager(); window.scrollTo({ top: document.querySelector(".table-wrap").offsetTop - 20, behavior: "smooth" }); }
+    });
+  });
+}
+
+/* =========================================================================
+   UTILS
+   ========================================================================= */
+function formatNum(n) { return n.toLocaleString("en-US"); }
+function formatBytes(b) {
+  if (b < 1024) return b + " B";
+  if (b < 1048576) return (b/1024).toFixed(1) + " KB";
+  if (b < 1073741824) return (b/1048576).toFixed(1) + " MB";
+  return (b/1073741824).toFixed(2) + " GB";
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+// Rebuild charts on resize
+let resizeTimer;
+window.addEventListener("resize", () => {
+  if (!state.rows.length) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { buildTreemap(); buildExtChart(); }, 200);
+});
+</script>
+</body>
+</html>
